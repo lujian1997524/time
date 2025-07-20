@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 10:06:56
- * 上次修改时间: 2025-07-20 09:34:40
- * 文件大小: 22580 bytes
+ * 最后修改时间: 2025-07-20 10:08:00
+ * 上次修改时间: 2025-07-20 10:06:57
+ * 文件大小: 22669 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -299,6 +299,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         for (let i = 0; i < Math.min(10, document.lineCount); i++) {
             const line = document.lineAt(i);
             if (timestampRegex.test(line.text)) {
+                console.log(`检测到时间戳注释在行 ${i}: ${line.text.trim()}`);
                 return true;
             }
         }
