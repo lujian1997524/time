@@ -334,6 +334,11 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             
             // 应用编辑
             await vscode.workspace.applyEdit(edit);
+            
+            // 保存文件
+            const doc = await vscode.workspace.openTextDocument(uri);
+            await doc.save();
+            
             console.log(`时间戳注释已更新（带时间）: ${uri.fsPath}`);
             
         } catch (error) {
