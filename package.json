@@ -1,0 +1,150 @@
+{
+  "name": "timestamp-tracker",
+  "displayName": "Timestamp Tracker",
+  "description": "Track file modifications with timestamps and auto-push to GitHub",
+  "version": "0.1.5",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lujian1997524/time.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lujian1997524/time/issues"
+  },
+  "homepage": "https://github.com/lujian1997524/time#readme",
+  "author": {
+    "name": "lujian1997524",
+    "url": "https://github.com/lujian1997524"
+  },
+  "license": "MIT",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "timestampTracker": [
+        {
+          "id": "timestampView",
+          "name": "文件时间戳",
+          "when": "timestampTrackerEnabled"
+        },
+        {
+          "id": "gitStatusView",
+          "name": "Git 状态",
+          "when": "timestampTrackerEnabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "timestampTracker",
+          "title": "时间戳跟踪",
+          "icon": "$(clock)"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "timestampTracker.refresh",
+        "title": "刷新",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "timestampTracker.addTimestamp",
+        "title": "添加时间戳",
+        "icon": "$(add)"
+      },
+      {
+        "command": "timestampTracker.pushToGit",
+        "title": "推送到Git",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "timestampTracker.settings",
+        "title": "设置",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "timestampTracker.refresh",
+          "when": "view == timestampView",
+          "group": "navigation"
+        },
+        {
+          "command": "timestampTracker.addTimestamp",
+          "when": "view == timestampView",
+          "group": "navigation"
+        },
+        {
+          "command": "timestampTracker.settings",
+          "when": "view == timestampView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "timestampTracker.addTimestamp",
+          "when": "view == timestampView"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "时间戳跟踪器",
+      "properties": {
+        "timestampTracker.autoCommitInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "自动提交间隔（秒）",
+          "scope": "resource"
+        },
+        "timestampTracker.enableAutoCommit": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用自动提交",
+          "scope": "resource"
+        },
+        "timestampTracker.gitRepository": {
+          "type": "string",
+          "default": "",
+          "description": "Git 仓库地址（为空时使用当前工作区的远程仓库）",
+          "scope": "resource"
+        },
+        "timestampTracker.timestampFormat": {
+          "type": "string",
+          "default": "YYYY-MM-DD HH:mm:ss",
+          "description": "时间戳格式",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "package:install": "vsce package && code --install-extension *.vsix",
+    "version:patch": "npm version patch",
+    "version:minor": "npm version minor",
+    "version:major": "npm version major",
+    "build": "npm run compile && npm run package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "moment": "^2.29.4",
+    "simple-git": "^3.15.1"
+  }
+}
