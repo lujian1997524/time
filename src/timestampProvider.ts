@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 10:11:13
- * 上次修改时间: 2025-07-20 10:09:53
- * 文件大小: 26111 bytes
+ * 最后修改时间: 2025-07-20 10:12:03
+ * 上次修改时间: 2025-07-20 10:11:14
+ * 文件大小: 26516 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -301,8 +301,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
     public async updateTimestampCommentWithTimes(uri: vscode.Uri, lastModified: Date, previousModified?: Date, fileSize?: number): Promise<void> {
         try {
             const document = await vscode.workspace.openTextDocument(uri);
-            const edit = new vscode.WorkspaceEdit();
-
+            
             // 生成新的时间戳注释
             const newComment = this.commentManager.generateTimestampComment(
                 uri.fsPath,
@@ -316,11 +315,22 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 return;
             }
 
-            // 1. 删除所有现有的时间戳注释块
-            await this.removeAllTimestampComments(document, edit);
+            // 读取文件内容
+            let fileContent = document.getText();
             
-            // 2. 在文件开头插入新的时间戳注释
-            edit.insert(uri, new vscode.Position(0, 0), newComment + '\n');
+            // 删除所有现有的时间戳注释
+            fileContent = this.removeTimestampCommentsFromContent(fileContent, uri.fsPath);
+            
+            // 在文件开头添加新的时间戳注释
+            fileContent = newComment + '\n' + fileContent;
+            
+            // 创建工作区编辑，替换整个文件内容
+            const edit = new vscode.WorkspaceEdit();
+            const fullRange = new vscode.Range(
+                new vscode.Position(0, 0),
+                new vscode.Position(document.lineCount, 0)
+            );
+            edit.replace(uri, fullRange, fileContent);
             
             // 应用编辑
             await vscode.workspace.applyEdit(edit);
