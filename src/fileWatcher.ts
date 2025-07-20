@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:35:30
- * 上次修改时间: 2025-07-20 09:34:23
- * 文件大小: 11054 bytes
+ * 最后修改时间: 2025-07-20 09:35:51
+ * 上次修改时间: 2025-07-20 09:35:31
+ * 文件大小: 11103 bytes
  */
 import * as vscode from 'vscode';
 import { TimestampProvider } from './timestampProvider';
@@ -100,7 +100,9 @@ export class FileWatcher implements vscode.Disposable {
         try {
             const stats = require('fs').statSync(uri.fsPath);
             fileModTime = stats.mtime;
-            console.log(`保存文件当前修改时间: ${fileModTime.toISOString()}`);
+            if (fileModTime) {
+                console.log(`保存文件当前修改时间: ${fileModTime.toISOString()}`);
+            }
         } catch (error) {
             console.error(`获取文件时间失败: ${error}`);
             fileModTime = undefined;
