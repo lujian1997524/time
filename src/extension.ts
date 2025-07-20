@@ -41,6 +41,23 @@ export function activate(context: vscode.ExtensionContext) {
             await gitManager.commitAndPush();
         }),
         
+        vscode.commands.registerCommand('timestampTracker.forcePushToGit', async () => {
+            // 显示确认对话框
+            const result = await vscode.window.showWarningMessage(
+                '⚠️ 强制推送将覆盖远程仓库的内容，这个操作不可撤销！',
+                {
+                    modal: true,
+                    detail: '这将强制推送本地的所有文件到远程仓库，覆盖远程仓库的所有内容。请确认你要继续。'
+                },
+                '确认强制推送',
+                '取消'
+            );
+            
+            if (result === '确认强制推送') {
+                await gitManager.forceCommitAndPush();
+            }
+        }),
+        
         vscode.commands.registerCommand('timestampTracker.settings', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'timestampTracker');
         })
