@@ -374,9 +374,9 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             // JavaScript/TypeScript/Java/C++ 等注释格式: /** ... */ 或 /* ... */
             cleanContent = this.removeJavaScriptComments(cleanContent, timestampKeywords);
         } else if (ext === '.sh' || ext === '.bash' || ext === '.zsh' || ext === '.yml' || 
-                   ext === '.yaml' || ext === '.toml' || ext === '.py' || ext === '.rb' || 
+                   ext === '.yaml' || ext === '.toml' || ext === '.rb' || 
                    ext === '.pl' || ext === '.r') {
-            // Shell/YAML/Python/Ruby 等注释格式: # ...
+            // Shell/YAML/Ruby 等注释格式: # ... (注意：Python已经在上面单独处理了)
             cleanContent = this.removeHashComments(cleanContent, timestampKeywords);
         }
         
