@@ -1,13 +1,15 @@
 /**
- * 最后修改时间: 2025-07-20 09:35:51
- * 上次修改时间: 2025-07-20 09:35:31
- * 文件大小: 11103 bytes
+ * 最后修改时间: 2025-07-20 10:04:35
+ * 上次修改时间: 2025-07-20 10:04:31
+ * 文件大小: 11105 bytes
  */
 import * as vscode from 'vscode';
 import { TimestampProvider } from './timestampProvider';
 import { GitManager } from './gitManager';
 import { GitIgnoreManager } from './gitIgnoreManager';
 import * as path from 'path';
+
+
 
 export class FileWatcher implements vscode.Disposable {
     private watchers: vscode.FileSystemWatcher[] = [];
