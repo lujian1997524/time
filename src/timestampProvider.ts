@@ -167,7 +167,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
     }
 
-    public addTimestampWithActualTime(uri: vscode.Uri, actualFileModTime: Date): void {
+    public async addTimestampWithActualTime(uri: vscode.Uri, actualFileModTime: Date): Promise<void> {
         console.log(`addTimestampWithActualTime 被调用，文件: ${uri.fsPath}`);
         console.log(`实际文件修改时间: ${actualFileModTime.toISOString()}`);
         
@@ -217,7 +217,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
     }
 
-    public addTimestamp(uri: vscode.Uri): void {
+    public async addTimestamp(uri: vscode.Uri): Promise<void> {
         console.log(`addTimestamp 被调用，文件: ${uri.fsPath}`);
         
         // 检查文件是否应该被跟踪

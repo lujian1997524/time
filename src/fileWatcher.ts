@@ -123,7 +123,7 @@ export class FileWatcher implements vscode.Disposable {
         this.timestampUpdateTimeout.set(uri.fsPath, timeout);
     }
 
-    private processFileChange(uri: vscode.Uri, changeType: string, actualFileModTime?: Date): void {
+    private async processFileChange(uri: vscode.Uri, changeType: string, actualFileModTime?: Date): Promise<void> {
         // 检查是否已经在处理这个文件
         if (this.isUpdatingTimestamp.has(uri.fsPath)) {
             console.log(`跳过重复的文件变化处理: ${uri.fsPath}`);
@@ -141,9 +141,9 @@ export class FileWatcher implements vscode.Disposable {
                 console.log(`检测到外部工具操作: ${changeType} - ${uri.fsPath}`);
                 // 对于外部工具操作，直接添加时间戳注释，使用保存的文件修改时间
                 if (actualFileModTime) {
-                    this.timestampProvider.addTimestampWithActualTime(uri, actualFileModTime);
+                    await this.timestampProvider.addTimestampWithActualTime(uri, actualFileModTime);
                 } else {
-                    this.timestampProvider.addTimestamp(uri);
+                    await this.timestampProvider.addTimestamp(uri);
                 }
             } else {
                 // 对于其他变化，只更新时间戳信息
