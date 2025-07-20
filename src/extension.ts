@@ -79,6 +79,20 @@ export function activate(context: vscode.ExtensionContext) {
                 `当前工作区配置:\n\n${configInfo}`,
                 { modal: true }
             );
+        }),
+
+        vscode.commands.registerCommand('timestampTracker.forceAddTimestamp', () => {
+            const activeEditor = vscode.window.activeTextEditor;
+            if (activeEditor) {
+                console.log(`强制添加时间戳到文件: ${activeEditor.document.uri.fsPath}`);
+                
+                // 直接调用时间戳添加，绕过循环检测
+                timestampProvider.addTimestamp(activeEditor.document.uri);
+                
+                vscode.window.showInformationMessage(`已强制添加时间戳到: ${activeEditor.document.fileName}`);
+            } else {
+                vscode.window.showWarningMessage('请先打开一个文件');
+            }
         })
     ];
 

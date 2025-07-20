@@ -163,6 +163,8 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
     }
 
     public addTimestamp(uri: vscode.Uri): void {
+        console.log(`addTimestamp 被调用，文件: ${uri.fsPath}`);
+        
         // 检查文件是否应该被跟踪
         if (!this.gitIgnoreManager.shouldAddTimestamp(uri.fsPath)) {
             console.log(`跳过被忽略的文件: ${uri.fsPath}`);
@@ -175,6 +177,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             
             // 只为支持的文件类型更新时间戳注释
             if (this.commentManager.isCommentSupported(uri.fsPath)) {
+                console.log(`文件支持注释，正在更新时间戳注释: ${uri.fsPath}`);
                 this.updateTimestampComment(uri);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
@@ -183,6 +186,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             this._onDidChangeTreeData.fire();
             vscode.window.showInformationMessage(`已更新文件时间戳: ${path.basename(uri.fsPath)}`);
         } catch (error) {
+            console.error(`添加时间戳失败: ${error}`);
             vscode.window.showErrorMessage(`添加时间戳失败: ${error}`);
         }
     }
