@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:34:39
- * 上次修改时间: 2025-07-20 09:33:05
- * 文件大小: 22441 bytes
+ * 最后修改时间: 2025-07-20 10:06:56
+ * 上次修改时间: 2025-07-20 09:34:40
+ * 文件大小: 22580 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -351,27 +351,29 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
     }
 
     private findTimestampCommentRange(document: vscode.TextDocument, timestampRegex: RegExp): vscode.Range | null {
-        let startLine = -1;
-        let endLine = -1;
+        let lastStartLine = -1;
+        let lastEndLine = -1;
         
-        // 扫描文件前20行（增加扫描范围）
+        // 扫描文件前20行，找到最后一个时间戳注释块
         for (let i = 0; i < Math.min(20, document.lineCount); i++) {
             const line = document.lineAt(i);
             
             // 如果找到时间戳相关的行
             if (timestampRegex.test(line.text)) {
-                if (startLine === -1) {
-                    // 找到第一个匹配行，需要向上查找注释块的真正开始
-                    startLine = this.findCommentBlockStart(document, i);
-                }
-                endLine = i;
+                // 每次找到时间戳注释，都重新确定注释块的范围
+                const blockStart = this.findCommentBlockStart(document, i);
+                const blockEnd = this.findCommentBlockEnd(document, i);
+                
+                // 更新为最后找到的注释块
+                lastStartLine = blockStart;
+                lastEndLine = blockEnd;
+                
+                console.log(`找到时间戳注释块: 行 ${blockStart}-${blockEnd}`);
             }
         }
         
-        if (startLine >= 0 && endLine >= 0) {
-            // 继续向下查找注释块的结束
-            const actualEndLine = this.findCommentBlockEnd(document, endLine);
-            return new vscode.Range(startLine, 0, actualEndLine + 1, 0);
+        if (lastStartLine >= 0 && lastEndLine >= 0) {
+            return new vscode.Range(lastStartLine, 0, lastEndLine + 1, 0);
         }
         
         return null;
