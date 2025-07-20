@@ -109,8 +109,17 @@ export class FileWatcher implements vscode.Disposable {
         this.isUpdatingTimestamp.add(uri.fsPath);
 
         try {
-            // 只更新文件时间戳信息，但不一定更新注释
-            this.timestampProvider.updateFileTimestamp(uri);
+            // 检测是否是外部工具（如Claude Code）的操作
+            const isExternalChange = this.isExternalFileChange(changeType);
+            
+            if (isExternalChange) {
+                console.log(`检测到外部工具操作: ${changeType} - ${uri.fsPath}`);
+                // 对于外部工具操作，直接添加时间戳注释
+                this.timestampProvider.addTimestamp(uri);
+            } else {
+                // 对于其他变化，只更新时间戳信息
+                this.timestampProvider.updateFileTimestamp(uri);
+            }
             
             // 记录变化
             this.timestampProvider.updateFileChange(uri.fsPath, changeType);
@@ -125,6 +134,23 @@ export class FileWatcher implements vscode.Disposable {
                 this.isUpdatingTimestamp.delete(uri.fsPath);
             }, 1000);
         }
+    }
+
+    private isExternalFileChange(changeType: string): boolean {
+        // 判断是否是外部工具的文件操作
+        // 当前时间戳，如果在很短时间内有文件变化，很可能是工具操作
+        const now = Date.now();
+        const lastCheck = this.lastExternalCheckTime || 0;
+        this.lastExternalCheckTime = now;
+        
+        // 如果距离上次检查很短时间内有多个文件变化，可能是批量操作（如Claude Code）
+        if (now - lastCheck < 100) {
+            console.log(`检测到可能的批量操作: ${changeType}`);
+            return true;
+        }
+        
+        // 检查是否是文件创建或修改（Claude Code常见操作）
+        return changeType === '文件创建' || changeType === '文件修改';
     }
 
     private onDocumentSaved(document: vscode.TextDocument): void {
