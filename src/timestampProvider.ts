@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:28:02
- * 上次修改时间: 2025-07-20 09:28:02
- * 文件大小: 19464 bytes
+ * 最后修改时间: 2025-07-20 09:33:04
+ * 上次修改时间: 2025-07-20 09:28:03
+ * 文件大小: 19900 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -181,14 +181,21 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             const existingFileInfo = this.fileTimestamps.get(uri.fsPath);
             const previousModifiedTime = existingFileInfo?.lastModified;
             
+            // 获取当前文件状态（这个mtime已经是更新后的时间）
             const stats = fs.statSync(uri.fsPath);
+            const currentModifiedTime = stats.mtime;
+            
+            // 更新内存中的文件时间戳信息
             this.addFileTimestamp(uri.fsPath, stats);
             
             // 只为支持的文件类型更新时间戳注释
             if (this.commentManager.isCommentSupported(uri.fsPath)) {
                 console.log(`文件支持注释，正在更新时间戳注释: ${uri.fsPath}`);
-                // 传递正确的previousModified时间给注释更新
-                this.updateTimestampCommentWithTimes(uri, stats.mtime, previousModifiedTime, stats.size);
+                console.log(`当前时间: ${currentModifiedTime.toISOString()}`);
+                console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
+                
+                // 传递正确的时间：当前时间和之前保存的时间
+                this.updateTimestampCommentWithTimes(uri, currentModifiedTime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
