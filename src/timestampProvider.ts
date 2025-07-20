@@ -341,6 +341,115 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
     }
 
+    private removeTimestampCommentsFromContent(content: string, filePath: string): string {
+        const ext = path.extname(filePath).toLowerCase();
+        const lines = content.split('\n');
+        const timestampRegex = this.commentManager.getTimestampRegex(filePath);
+        
+        if (!timestampRegex) {
+            return content;
+        }
+
+        const resultLines: string[] = [];
+        let i = 0;
+        
+        while (i < lines.length) {
+            const line = lines[i];
+            
+            // 检查当前行是否是时间戳注释的一部分
+            if (timestampRegex.test(line)) {
+                // 找到时间戳注释块的开始和结束
+                const blockStart = this.findContentCommentBlockStart(lines, i);
+                const blockEnd = this.findContentCommentBlockEnd(lines, i, ext);
+                
+                console.log(`删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
+                
+                // 跳过整个注释块
+                i = blockEnd + 1;
+            } else {
+                // 保留非时间戳注释行
+                resultLines.push(line);
+                i++;
+            }
+        }
+        
+        return resultLines.join('\n');
+    }
+
+    private findContentCommentBlockStart(lines: string[], fromLine: number): number {
+        // 从给定行向上查找注释块的开始
+        for (let i = fromLine; i >= 0; i--) {
+            const trimmed = lines[i].trim();
+            
+            // 检查是否是注释块的开始标记
+            if (trimmed.startsWith('/**') || 
+                trimmed.startsWith('/*') ||
+                trimmed.startsWith('<!--') ||
+                trimmed.startsWith('"""') ||
+                trimmed.startsWith('=begin') ||
+                trimmed.startsWith('<#') ||
+                trimmed.startsWith('--[[')) {
+                return i;
+            }
+            
+            // 如果是单行注释的延续，继续向上查找
+            if (trimmed.startsWith('//') || 
+                trimmed.startsWith('#') ||
+                trimmed.startsWith('*') ||
+                trimmed.startsWith('%') ||
+                trimmed.startsWith('"') ||
+                trimmed.startsWith(';') ||
+                trimmed.startsWith('--')) {
+                continue;
+            }
+            
+            // 如果遇到非注释行，停止查找
+            if (trimmed.length > 0) {
+                return i + 1;
+            }
+        }
+        
+        return fromLine;
+    }
+
+    private findContentCommentBlockEnd(lines: string[], fromLine: number, ext: string): number {
+        // 从给定行向下查找注释块的结束
+        for (let i = fromLine; i < Math.min(fromLine + 15, lines.length); i++) {
+            const trimmed = lines[i].trim();
+            
+            // 检查多行注释的结束标记
+            if (trimmed.includes('*/') || 
+                trimmed.includes('-->') || 
+                trimmed.includes('"""') ||
+                trimmed.includes('%}') ||
+                trimmed.includes('#>') ||
+                trimmed.includes('=end') ||
+                trimmed.includes(']]') ||
+                trimmed.includes('-}')) {
+                return i;
+            }
+            
+            // 对于单行注释，检查下一行是否还是注释
+            if (i < lines.length - 1) {
+                const nextTrimmed = lines[i + 1].trim();
+                
+                // 如果下一行不是注释或者是空行，当前行就是结束
+                if (nextTrimmed.length === 0 || 
+                    (!nextTrimmed.startsWith('//') && 
+                     !nextTrimmed.startsWith('#') &&
+                     !nextTrimmed.startsWith('*') &&
+                     !nextTrimmed.startsWith('%') &&
+                     !nextTrimmed.startsWith('"') &&
+                     !nextTrimmed.startsWith(';') &&
+                     !nextTrimmed.startsWith('--'))) {
+                    return i;
+                }
+            }
+        }
+        
+        return fromLine;
+    }
+
     private async removeAllTimestampComments(document: vscode.TextDocument, edit: vscode.WorkspaceEdit): Promise<void> {
         const timestampRegex = this.commentManager.getTimestampRegex(document.uri.fsPath);
         if (!timestampRegex) {
