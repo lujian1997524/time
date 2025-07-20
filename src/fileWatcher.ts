@@ -214,6 +214,12 @@ export class FileWatcher implements vscode.Disposable {
 
         console.log(`用户保存文档: ${document.uri.fsPath}`);
         
+        // 检查是否已经有待处理的时间戳更新
+        if (this.timestampUpdateTimeout.has(document.uri.fsPath)) {
+            console.log(`跳过重复的时间戳更新请求: ${document.uri.fsPath}`);
+            return;
+        }
+        
         // 标记开始更新时间戳
         this.isUpdatingTimestamp.add(document.uri.fsPath);
 
@@ -233,7 +239,7 @@ export class FileWatcher implements vscode.Disposable {
             // 延迟清除标记
             setTimeout(() => {
                 this.isUpdatingTimestamp.delete(document.uri.fsPath);
-            }, 1000);
+            }, 2000); // 增加延迟时间确保所有异步操作完成
         }
     }
 
