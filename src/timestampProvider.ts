@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 10:09:52
- * 上次修改时间: 2025-07-20 10:09:13
- * 文件大小: 25987 bytes
+ * 最后修改时间: 2025-07-20 10:11:13
+ * 上次修改时间: 2025-07-20 10:09:53
+ * 文件大小: 26111 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -338,9 +338,14 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
 
         const rangesToDelete: vscode.Range[] = [];
+        const processedLines = new Set<number>();
         
         // 扫描整个文件的前30行查找所有时间戳注释块
         for (let i = 0; i < Math.min(30, document.lineCount); i++) {
+            if (processedLines.has(i)) {
+                continue; // 跳过已处理的行
+            }
+            
             const line = document.lineAt(i);
             
             if (timestampRegex.test(line.text)) {
@@ -348,21 +353,19 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 const blockStart = this.findCommentBlockStart(document, i);
                 const blockEnd = this.findCommentBlockEnd(document, i);
                 
+                // 标记这个范围内的所有行为已处理
+                for (let j = blockStart; j <= blockEnd; j++) {
+                    processedLines.add(j);
+                }
+                
                 // 创建删除范围（包含换行符）
                 const deleteRange = new vscode.Range(
-                    blockStart, 0,
-                    Math.min(blockEnd + 1, document.lineCount), 0
+                    new vscode.Position(blockStart, 0),
+                    new vscode.Position(Math.min(blockEnd + 1, document.lineCount), 0)
                 );
                 
-                // 检查是否与已有范围重叠
-                const overlaps = rangesToDelete.some(existingRange => 
-                    existingRange.intersection(deleteRange) !== undefined
-                );
-                
-                if (!overlaps) {
-                    rangesToDelete.push(deleteRange);
-                    console.log(`标记删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
-                }
+                rangesToDelete.push(deleteRange);
+                console.log(`标记删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
             }
         }
 
