@@ -1,8 +1,30 @@
 /**
- * 最后修改时间: 2025-07-20 10:12:03
- * 上次修改时间: 2025-07-20 10:11:14
- * 文件大小: 26516 bytes
+ * 最后修改时间: 2025-07-20 10:28:53
+ * 上次修改时间: 2025-07-20 10:28:28
+ * 文件大小: 38167 bytes
  */
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
+
+/**
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -167,7 +189,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
     }
 
-    public async addTimestampWithActualTime(uri: vscode.Uri, actualFileModTime: Date): Promise<void> {
+    public addTimestampWithActualTime(uri: vscode.Uri, actualFileModTime: Date): void {
         console.log(`addTimestampWithActualTime 被调用，文件: ${uri.fsPath}`);
         console.log(`实际文件修改时间: ${actualFileModTime.toISOString()}`);
         
@@ -185,7 +207,6 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             // 获取当前文件状态（用于文件大小）
             const stats = fs.statSync(uri.fsPath);
             
-            // 手动创建文件时间戳信息，使用传入的实际修改时间
             const fileTimestamp: FileTimestamp = {
                 filePath: uri.fsPath,
                 fileName: path.basename(uri.fsPath),
@@ -203,8 +224,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 console.log(`当前时间: ${actualFileModTime.toISOString()}`);
                 console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
                 
-                // 传递正确的时间：实际文件修改时间和之前保存的时间
-                await this.updateTimestampCommentWithTimes(uri, actualFileModTime, previousModifiedTime, stats.size);
+                this.updateTimestampCommentWithTimes(uri, actualFileModTime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
@@ -217,7 +237,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
     }
 
-    public async addTimestamp(uri: vscode.Uri): Promise<void> {
+    public addTimestamp(uri: vscode.Uri): void {
         console.log(`addTimestamp 被调用，文件: ${uri.fsPath}`);
         
         // 检查文件是否应该被跟踪
@@ -245,7 +265,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
                 
                 // 传递正确的时间：当前时间和之前保存的时间
-                await this.updateTimestampCommentWithTimes(uri, currentModifiedTime, previousModifiedTime, stats.size);
+                this.updateTimestampCommentWithTimes(uri, currentModifiedTime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
@@ -317,11 +337,9 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
 
             // 读取文件内容
             let fileContent = document.getText();
-            console.log(`原始文件内容行数: ${fileContent.split('\n').length}`);
             
             // 删除所有现有的时间戳注释
             fileContent = this.removeTimestampCommentsFromContent(fileContent, uri.fsPath);
-            console.log(`清理后文件内容行数: ${fileContent.split('\n').length}`);
             
             // 在文件开头添加新的时间戳注释
             fileContent = newComment + '\n' + fileContent;
@@ -337,9 +355,6 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             // 应用编辑
             await vscode.workspace.applyEdit(edit);
             
-            // 等待一点时间确保编辑完成
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
             // 保存文件
             const doc = await vscode.workspace.openTextDocument(uri);
             await doc.save();
@@ -353,201 +368,31 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
 
     private removeTimestampCommentsFromContent(content: string, filePath: string): string {
         const ext = path.extname(filePath).toLowerCase();
-        
-        // 使用更简单的字符串匹配方法删除时间戳注释
-        // 这种方法更可靠，不依赖复杂的正则表达式
-        
-        let cleanContent = content;
-        
-        // 定义时间戳关键词
-        const timestampKeywords = ['最后修改时间', '上次修改时间', '文件大小', 'Last modified', 'Modified', 'File size'];
-        
-        if (ext === '.md' || ext === '.html' || ext === '.xml') {
-            // HTML/XML/Markdown 注释格式: <!-- ... -->
-            cleanContent = this.removeHtmlComments(cleanContent, timestampKeywords);
-        } else if (ext === '.py') {
-            // Python 注释格式: """ ... """
-            cleanContent = this.removePythonComments(cleanContent, timestampKeywords);
-        } else if (ext === '.js' || ext === '.ts' || ext === '.jsx' || ext === '.tsx' || 
-                   ext === '.java' || ext === '.c' || ext === '.cpp' || ext === '.cs' ||
-                   ext === '.swift' || ext === '.kt' || ext === '.dart' || ext === '.scala') {
-            // JavaScript/TypeScript/Java/C++ 等注释格式: /** ... */ 或 /* ... */
-            cleanContent = this.removeJavaScriptComments(cleanContent, timestampKeywords);
-        } else if (ext === '.sh' || ext === '.bash' || ext === '.zsh' || ext === '.yml' || 
-                   ext === '.yaml' || ext === '.toml' || ext === '.rb' || 
-                   ext === '.pl' || ext === '.r') {
-            // Shell/YAML/Ruby 等注释格式: # ... (注意：Python已经在上面单独处理了)
-            cleanContent = this.removeHashComments(cleanContent, timestampKeywords);
-        }
-        
-        console.log(`清理前行数: ${content.split('\n').length}, 清理后行数: ${cleanContent.split('\n').length}`);
-        
-        return cleanContent;
-    }
-
-    private removeHtmlComments(content: string, keywords: string[]): string {
         const lines = content.split('\n');
+        const timestampRegex = this.commentManager.getTimestampRegex(filePath);
+        
+        if (!timestampRegex) {
+            return content;
+        }
+
         const resultLines: string[] = [];
         let i = 0;
         
         while (i < lines.length) {
             const line = lines[i];
             
-            // 检查是否是HTML注释开始
-            if (line.includes('<!--')) {
-                // 收集整个注释块内容来检查是否包含时间戳关键词
-                let commentContent = '';
-                let commentStartIndex = i;
-                let endFound = false;
+            // 检查当前行是否是时间戳注释的一部分
+            if (timestampRegex.test(line)) {
+                // 找到时间戳注释块的开始和结束
+                const blockStart = this.findContentCommentBlockStart(lines, i);
+                const blockEnd = this.findContentCommentBlockEnd(lines, i, ext);
                 
-                // 读取整个注释块
-                while (i < lines.length && !endFound) {
-                    commentContent += lines[i] + '\n';
-                    if (lines[i].includes('-->')) {
-                        endFound = true;
-                    }
-                    i++;
-                }
+                console.log(`删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
                 
-                // 检查注释块是否包含时间戳关键词
-                const containsTimestamp = keywords.some(keyword => commentContent.includes(keyword));
-                
-                if (containsTimestamp) {
-                    console.log(`删除HTML时间戳注释块，行 ${commentStartIndex}-${i-1}`);
-                    // 跳过空行
-                    while (i < lines.length && lines[i].trim() === '') {
-                        i++;
-                    }
-                } else {
-                    // 保留非时间戳注释
-                    const commentLines = commentContent.split('\n');
-                    commentLines.pop(); // 移除最后的空行
-                    resultLines.push(...commentLines);
-                }
+                // 跳过整个注释块
+                i = blockEnd + 1;
             } else {
-                resultLines.push(line);
-                i++;
-            }
-        }
-        
-        return resultLines.join('\n');
-    }
-
-    private removePythonComments(content: string, keywords: string[]): string {
-        const lines = content.split('\n');
-        const resultLines: string[] = [];
-        let i = 0;
-        
-        while (i < lines.length) {
-            const line = lines[i];
-            
-            // 检查是否是Python多行注释开始
-            if (line.includes('"""')) {
-                // 收集整个注释块内容来检查是否包含时间戳关键词
-                let commentContent = '';
-                let commentStartIndex = i;
-                let endFound = false;
-                let quoteCount = (line.match(/"""/g) || []).length;
-                
-                if (quoteCount >= 2) {
-                    // 单行包含开始和结束
-                    commentContent = line;
-                    endFound = true;
-                    i++;
-                } else {
-                    // 多行注释
-                    commentContent += line + '\n';
-                    i++;
-                    while (i < lines.length && !endFound) {
-                        commentContent += lines[i] + '\n';
-                        if (lines[i].includes('"""')) {
-                            endFound = true;
-                        }
-                        i++;
-                    }
-                }
-                
-                // 检查注释块是否包含时间戳关键词
-                const containsTimestamp = keywords.some(keyword => commentContent.includes(keyword));
-                
-                if (containsTimestamp) {
-                    console.log(`删除Python时间戳注释块，行 ${commentStartIndex}-${i - 1}`);
-                    // 跳过空行
-                    while (i < lines.length && lines[i].trim() === '') {
-                        i++;
-                    }
-                } else {
-                    // 保留非时间戳注释
-                    const commentLines = commentContent.split('\n');
-                    commentLines.pop(); // 移除最后的空行
-                    resultLines.push(...commentLines);
-                }
-            } else {
-                resultLines.push(line);
-                i++;
-            }
-        }
-        
-        return resultLines.join('\n');
-    }
-
-    private removeJavaScriptComments(content: string, keywords: string[]): string {
-        const lines = content.split('\n');
-        const resultLines: string[] = [];
-        let i = 0;
-        
-        while (i < lines.length) {
-            const line = lines[i];
-            
-            // 检查是否是JavaScript注释开始且包含时间戳关键词
-            if ((line.includes('/**') || line.includes('/*')) && keywords.some(keyword => content.substring(content.indexOf(line)).includes(keyword))) {
-                // 找到注释块的结束
-                let endFound = false;
-                
-                if (line.includes('*/')) {
-                    // 单行注释
-                    endFound = true;
-                    i++;
-                } else {
-                    // 多行注释
-                    i++;
-                    while (i < lines.length && !endFound) {
-                        if (lines[i].includes('*/')) {
-                            endFound = true;
-                        }
-                        i++;
-                    }
-                }
-                
-                // 跳过空行
-                while (i < lines.length && lines[i].trim() === '') {
-                    i++;
-                }
-            } else {
-                resultLines.push(line);
-                i++;
-            }
-        }
-        
-        return resultLines.join('\n');
-    }
-
-    private removeHashComments(content: string, keywords: string[]): string {
-        const lines = content.split('\n');
-        const resultLines: string[] = [];
-        let i = 0;
-        
-        while (i < lines.length) {
-            const line = lines[i];
-            
-            // 检查是否是#注释且包含时间戳关键词
-            if (line.trim().startsWith('#') && keywords.some(keyword => line.includes(keyword))) {
-                // 跳过连续的#注释行（时间戳注释块）
-                while (i < lines.length && 
-                       (lines[i].trim().startsWith('#') || lines[i].trim() === '')) {
-                    i++;
-                }
-            } else {
+                // 保留非时间戳注释行
                 resultLines.push(line);
                 i++;
             }
