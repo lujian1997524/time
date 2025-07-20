@@ -67,6 +67,11 @@
         "icon": "$(sync)"
       },
       {
+        "command": "timestampTracker.forcePushToGit",
+        "title": "强制推送覆盖",
+        "icon": "$(sync-ignored)"
+      },
+      {
         "command": "timestampTracker.settings",
         "title": "设置",
         "icon": "$(settings-gear)"
@@ -81,6 +86,11 @@
         },
         {
           "command": "timestampTracker.addTimestamp",
+          "when": "view == timestampView",
+          "group": "navigation"
+        },
+        {
+          "command": "timestampTracker.forcePushToGit",
           "when": "view == timestampView",
           "group": "navigation"
         },

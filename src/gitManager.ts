@@ -133,6 +133,56 @@ export class GitManager {
         await this.pushToRemote();
     }
 
+    public async forceCommitAndPush(): Promise<void> {
+        await this.commitChanges();
+        await this.forcePushToRemote();
+    }
+
+    public async forcePushToRemote(): Promise<void> {
+        if (!this.git) {
+            vscode.window.showErrorMessage('Git 未初始化');
+            return;
+        }
+
+        try {
+            const config = this.getWorkspaceConfig();
+            let repository = config.get<string>('gitRepository');
+            
+            // 如果没有配置仓库地址，尝试使用当前工作区的远程仓库
+            if (!repository) {
+                const remotes = await this.git.getRemotes(true);
+                if (remotes.length > 0) {
+                    // 优先使用 origin，如果没有则使用第一个远程仓库
+                    const origin = remotes.find((remote: any) => remote.name === 'origin');
+                    const targetRemote = origin || remotes[0];
+                    repository = targetRemote.refs.push;
+                    console.log(`使用现有远程仓库: ${targetRemote.name} -> ${repository}`);
+                }
+            }
+
+            if (!repository) {
+                vscode.window.showErrorMessage('请在工作区设置中配置 Git 仓库地址，或确保当前工作区已连接到远程仓库');
+                return;
+            }
+
+            // 检查是否已有远程仓库配置
+            const remotes = await this.git.getRemotes(true);
+            const hasOrigin = remotes.some((remote: any) => remote.name === 'origin');
+            
+            if (!hasOrigin) {
+                await this.git.addRemote('origin', repository);
+                console.log(`添加远程仓库: ${repository}`);
+            }
+
+            // 强制推送到远程仓库，覆盖远程分支
+            await this.git.push('origin', 'main', ['--force']);
+            vscode.window.showInformationMessage(`强制推送成功，已覆盖远程仓库: ${repository}`);
+            
+        } catch (error) {
+            vscode.window.showErrorMessage(`强制推送失败: ${error}`);
+        }
+    }
+
     public startAutoCommit(): void {
         const config = this.getWorkspaceConfig();
         const enabled = config.get<boolean>('enableAutoCommit');
