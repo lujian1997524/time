@@ -441,20 +441,25 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         while (i < lines.length) {
             const line = lines[i];
             
-            // 检查是否是Python多行注释开始且包含时间戳关键词
-            if (line.includes('"""') && keywords.some(keyword => content.substring(content.indexOf(line)).includes(keyword))) {
-                // 找到注释块的结束
+            // 检查是否是Python多行注释开始
+            if (line.includes('"""')) {
+                // 收集整个注释块内容来检查是否包含时间戳关键词
+                let commentContent = '';
+                let commentStartIndex = i;
                 let endFound = false;
                 let quoteCount = (line.match(/"""/g) || []).length;
                 
                 if (quoteCount >= 2) {
                     // 单行包含开始和结束
+                    commentContent = line;
                     endFound = true;
                     i++;
                 } else {
                     // 多行注释
+                    commentContent += line + '\n';
                     i++;
                     while (i < lines.length && !endFound) {
+                        commentContent += lines[i] + '\n';
                         if (lines[i].includes('"""')) {
                             endFound = true;
                         }
@@ -462,9 +467,20 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                     }
                 }
                 
-                // 跳过空行
-                while (i < lines.length && lines[i].trim() === '') {
-                    i++;
+                // 检查注释块是否包含时间戳关键词
+                const containsTimestamp = keywords.some(keyword => commentContent.includes(keyword));
+                
+                if (containsTimestamp) {
+                    console.log(`删除Python时间戳注释块，行 ${commentStartIndex}-${i - 1}`);
+                    // 跳过空行
+                    while (i < lines.length && lines[i].trim() === '') {
+                        i++;
+                    }
+                } else {
+                    // 保留非时间戳注释
+                    const commentLines = commentContent.split('\n');
+                    commentLines.pop(); // 移除最后的空行
+                    resultLines.push(...commentLines);
                 }
             } else {
                 resultLines.push(line);
