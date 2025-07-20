@@ -80,6 +80,11 @@
         "command": "timestampTracker.showConfig",
         "title": "显示当前配置",
         "icon": "$(info)"
+      },
+      {
+        "command": "timestampTracker.forceAddTimestamp",
+        "title": "强制添加时间戳",
+        "icon": "$(clock)"
       }
     ],
     "menus": {
@@ -106,6 +111,11 @@
         },
         {
           "command": "timestampTracker.showConfig",
+          "when": "view == timestampView",
+          "group": "navigation"
+        },
+        {
+          "command": "timestampTracker.forceAddTimestamp",
           "when": "view == timestampView",
           "group": "navigation"
         }
