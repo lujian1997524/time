@@ -5,5 +5,10 @@ def hello_world():
     print("Hello, World!")
     return "success"
 
+def test_function():
+    """新添加的测试函数"""
+    return "测试重复注释修复"
+
 if __name__ == "__main__":
     hello_world()
+    test_function()
