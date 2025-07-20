@@ -1,3 +1,8 @@
+/**
+ * 最后修改时间: 2025-07-20 09:44:15
+ * 上次修改时间: 2025-07-20 09:02:20
+ * 文件大小: 13771 bytes
+ */
 import * as vscode from 'vscode';
 import { simpleGit } from 'simple-git';
 import * as path from 'path';
@@ -73,7 +78,13 @@ export class GitManager {
                 return;
             }
 
-            const commitMessage = message || `自动提交 - ${moment().format('YYYY-MM-DD HH:mm:ss')}`;
+            let commitMessage: string;
+            if (message) {
+                commitMessage = message;
+            } else {
+                // 生成详细的提交信息
+                commitMessage = await this.generateDetailedCommitMessage(status);
+            }
             
             // 暂存所有修改的文件
             await this.git.add('.');
@@ -87,6 +98,109 @@ export class GitManager {
         } catch (error) {
             vscode.window.showErrorMessage(`提交失败: ${error}`);
         }
+    }
+
+    private async generateDetailedCommitMessage(status: any): Promise<string> {
+        const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+        
+        // 分类文件变化
+        const changes = {
+            created: status.files.filter((f: any) => f.index === 'A' || f.working_dir === 'A'),
+            modified: status.files.filter((f: any) => f.index === 'M' || f.working_dir === 'M'),
+            deleted: status.files.filter((f: any) => f.index === 'D' || f.working_dir === 'D'),
+            renamed: status.files.filter((f: any) => f.index === 'R' || f.working_dir === 'R')
+        };
+
+        let summary = '';
+        const details = [];
+
+        // 生成概述
+        if (changes.created.length > 0) {
+            summary += `新增${changes.created.length}个文件`;
+            details.push(`📝 新增文件: ${changes.created.map((f: any) => path.basename(f.path)).join(', ')}`);
+        }
+        
+        if (changes.modified.length > 0) {
+            if (summary) summary += ', ';
+            summary += `修改${changes.modified.length}个文件`;
+            details.push(`✏️ 修改文件: ${changes.modified.map((f: any) => path.basename(f.path)).join(', ')}`);
+        }
+        
+        if (changes.deleted.length > 0) {
+            if (summary) summary += ', ';
+            summary += `删除${changes.deleted.length}个文件`;
+            details.push(`🗑️ 删除文件: ${changes.deleted.map((f: any) => path.basename(f.path)).join(', ')}`);
+        }
+        
+        if (changes.renamed.length > 0) {
+            if (summary) summary += ', ';
+            summary += `重命名${changes.renamed.length}个文件`;
+            details.push(`📝 重命名文件: ${changes.renamed.map((f: any) => path.basename(f.path)).join(', ')}`);
+        }
+
+        // 检测文件类型和特殊操作
+        const typeAnalysis = this.analyzeFileTypes(status.files);
+        if (typeAnalysis.length > 0) {
+            details.push(`🔧 涉及: ${typeAnalysis.join(', ')}`);
+        }
+
+        // 构建最终提交信息
+        const commitMessage = `${summary} - ${timestamp}
+
+${details.join('\n')}
+
+📊 变更统计: ${status.files.length}个文件
+🕒 自动提交时间: ${timestamp}`;
+
+        console.log('生成的提交信息:', commitMessage);
+        return commitMessage;
+    }
+
+    private analyzeFileTypes(files: any[]): string[] {
+        const analysis = [];
+        const extensions = new Set(files.map((f: any) => path.extname(f.path).toLowerCase()));
+        
+        // 检测文件类型
+        if (extensions.has('.ts') || extensions.has('.js')) {
+            analysis.push('TypeScript/JavaScript代码');
+        }
+        if (extensions.has('.json')) {
+            analysis.push('配置文件');
+        }
+        if (extensions.has('.md')) {
+            analysis.push('文档更新');
+        }
+        if (extensions.has('.css') || extensions.has('.scss')) {
+            analysis.push('样式文件');
+        }
+        if (extensions.has('.html')) {
+            analysis.push('页面文件');
+        }
+        
+        // 检测特殊文件
+        const specialFiles = files.filter((f: any) => {
+            const fileName = path.basename(f.path).toLowerCase();
+            return fileName.includes('package.json') || 
+                   fileName.includes('tsconfig.json') || 
+                   fileName.includes('readme') ||
+                   fileName.includes('license');
+        });
+        
+        if (specialFiles.length > 0) {
+            analysis.push('项目配置');
+        }
+        
+        // 检测时间戳更新
+        const hasTimestampFiles = files.some((f: any) => 
+            f.path.includes('timestamp') || 
+            f.path.includes('时间戳')
+        );
+        
+        if (hasTimestampFiles) {
+            analysis.push('时间戳跟踪');
+        }
+        
+        return analysis;
     }
 
     public async pushToRemote(): Promise<void> {
