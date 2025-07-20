@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:27:36
- * 上次修改时间: 2025-07-20 09:27:36
- * 文件大小: 16669 bytes
+ * 最后修改时间: 2025-07-20 09:28:02
+ * 上次修改时间: 2025-07-20 09:28:02
+ * 文件大小: 19464 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -411,6 +411,78 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             fileInfo?.lastModified || new Date(),
             fileInfo?.previousModified,
             fileInfo?.size
+        );
+
+        if (!comment) {
+            console.log(`无法为文件生成时间戳注释: ${uri.fsPath}`);
+            return;
+        }
+
+        // 在文件开头插入新注释
+        edit.insert(uri, new vscode.Position(0, 0), comment);
+        
+        console.log(`插入新时间戳注释: ${uri.fsPath}`);
+
+        try {
+            await vscode.workspace.applyEdit(edit);
+            await document.save();
+        } catch (error) {
+            console.error('插入新时间戳注释失败:', error);
+        }
+    }
+
+    private async updateExistingTimestampCommentWithTimes(uri: vscode.Uri, lastModified: Date, previousModified?: Date, fileSize?: number): Promise<void> {
+        const document = await vscode.workspace.openTextDocument(uri);
+        const edit = new vscode.WorkspaceEdit();
+        
+        // 生成新的时间戳注释，使用传入的时间参数
+        const comment = this.commentManager.generateTimestampComment(
+            uri.fsPath,
+            lastModified,
+            previousModified,
+            fileSize
+        );
+
+        if (!comment) {
+            console.log(`无法为文件生成时间戳注释: ${uri.fsPath}`);
+            return;
+        }
+
+        // 找到现有的时间戳注释并替换
+        const timestampRegex = this.commentManager.getTimestampRegex(uri.fsPath);
+        
+        if (timestampRegex && document.lineCount > 0) {
+            const commentRange = this.findTimestampCommentRange(document, timestampRegex);
+            
+            if (commentRange) {
+                // 替换现有注释
+                edit.replace(uri, commentRange, comment);
+                console.log(`更新现有时间戳注释: ${uri.fsPath} (行 ${commentRange.start.line}-${commentRange.end.line})`);
+            } else {
+                // 如果找不到完整的注释块，在开头插入
+                edit.insert(uri, new vscode.Position(0, 0), comment);
+                console.log(`插入新时间戳注释: ${uri.fsPath} (未找到完整注释块)`);
+            }
+        }
+
+        try {
+            await vscode.workspace.applyEdit(edit);
+            await document.save();
+        } catch (error) {
+            console.error('更新现有时间戳注释失败:', error);
+        }
+    }
+
+    private async insertNewTimestampCommentWithTimes(uri: vscode.Uri, lastModified: Date, previousModified?: Date, fileSize?: number): Promise<void> {
+        const document = await vscode.workspace.openTextDocument(uri);
+        const edit = new vscode.WorkspaceEdit();
+        
+        // 生成新的时间戳注释，使用传入的时间参数
+        const comment = this.commentManager.generateTimestampComment(
+            uri.fsPath,
+            lastModified,
+            previousModified,
+            fileSize
         );
 
         if (!comment) {
