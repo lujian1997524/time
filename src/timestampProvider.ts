@@ -317,9 +317,11 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
 
             // 读取文件内容
             let fileContent = document.getText();
+            console.log(`原始文件内容行数: ${fileContent.split('\n').length}`);
             
             // 删除所有现有的时间戳注释
             fileContent = this.removeTimestampCommentsFromContent(fileContent, uri.fsPath);
+            console.log(`清理后文件内容行数: ${fileContent.split('\n').length}`);
             
             // 在文件开头添加新的时间戳注释
             fileContent = newComment + '\n' + fileContent;
