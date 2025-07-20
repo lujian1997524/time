@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 10:09:12
- * 上次修改时间: 2025-07-20 10:08:45
- * 文件大小: 24094 bytes
+ * 最后修改时间: 2025-07-20 10:09:52
+ * 上次修改时间: 2025-07-20 10:09:13
+ * 文件大小: 25987 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -329,6 +329,51 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         } catch (error) {
             console.error('更新时间戳注释失败:', error);
         }
+    }
+
+    private async removeAllTimestampComments(document: vscode.TextDocument, edit: vscode.WorkspaceEdit): Promise<void> {
+        const timestampRegex = this.commentManager.getTimestampRegex(document.uri.fsPath);
+        if (!timestampRegex) {
+            return;
+        }
+
+        const rangesToDelete: vscode.Range[] = [];
+        
+        // 扫描整个文件的前30行查找所有时间戳注释块
+        for (let i = 0; i < Math.min(30, document.lineCount); i++) {
+            const line = document.lineAt(i);
+            
+            if (timestampRegex.test(line.text)) {
+                // 找到时间戳注释，确定完整的注释块范围
+                const blockStart = this.findCommentBlockStart(document, i);
+                const blockEnd = this.findCommentBlockEnd(document, i);
+                
+                // 创建删除范围（包含换行符）
+                const deleteRange = new vscode.Range(
+                    blockStart, 0,
+                    Math.min(blockEnd + 1, document.lineCount), 0
+                );
+                
+                // 检查是否与已有范围重叠
+                const overlaps = rangesToDelete.some(existingRange => 
+                    existingRange.intersection(deleteRange) !== undefined
+                );
+                
+                if (!overlaps) {
+                    rangesToDelete.push(deleteRange);
+                    console.log(`标记删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
+                }
+            }
+        }
+
+        // 按倒序删除（从文件末尾开始），避免行号偏移问题
+        rangesToDelete.sort((a, b) => b.start.line - a.start.line);
+        
+        for (const range of rangesToDelete) {
+            edit.delete(document.uri, range);
+        }
+        
+        console.log(`总共删除 ${rangesToDelete.length} 个时间戳注释块`);
     }
 
     private async hasTimestampComment(document: vscode.TextDocument): Promise<boolean> {
