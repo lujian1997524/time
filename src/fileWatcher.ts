@@ -1,3 +1,8 @@
+/**
+ * 最后修改时间: 2025-07-20 09:33:48
+ * 上次修改时间: 2025-07-20 09:17:57
+ * 文件大小: 10649 bytes
+ */
 import * as vscode from 'vscode';
 import { TimestampProvider } from './timestampProvider';
 import { GitManager } from './gitManager';
@@ -90,6 +95,16 @@ export class FileWatcher implements vscode.Disposable {
 
         console.log(`文件变化检测: ${changeType} - ${uri.fsPath}`);
         
+        // 立即保存文件的当前修改时间（在添加注释之前）
+        let fileModTime: Date | undefined;
+        try {
+            const stats = require('fs').statSync(uri.fsPath);
+            fileModTime = stats.mtime;
+            console.log(`保存文件当前修改时间: ${fileModTime.toISOString()}`);
+        } catch (error) {
+            console.error(`获取文件时间失败: ${error}`);
+        }
+        
         // 防抖动：清除之前的定时器
         const existingTimeout = this.timestampUpdateTimeout.get(uri.fsPath);
         if (existingTimeout) {
@@ -98,7 +113,7 @@ export class FileWatcher implements vscode.Disposable {
 
         // 延迟处理文件变化，避免频繁触发
         const timeout = setTimeout(() => {
-            this.processFileChange(uri, changeType);
+            this.processFileChange(uri, changeType, fileModTime);
             this.timestampUpdateTimeout.delete(uri.fsPath);
         }, 500); // 500ms 延迟
 
