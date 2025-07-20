@@ -60,6 +60,25 @@ export function activate(context: vscode.ExtensionContext) {
         
         vscode.commands.registerCommand('timestampTracker.settings', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'timestampTracker');
+        }),
+
+        vscode.commands.registerCommand('timestampTracker.showConfig', () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            const config = vscode.workspace.getConfiguration('timestampTracker', workspaceFolder?.uri);
+            
+            const configInfo = [
+                `工作区: ${workspaceFolder?.name || '未知'}`,
+                `路径: ${workspaceFolder?.uri.fsPath || '无路径'}`,
+                `Git仓库: ${config.get<string>('gitRepository') || '未设置'}`,
+                `自动提交: ${config.get<boolean>('enableAutoCommit') ? '启用' : '禁用'}`,
+                `提交间隔: ${config.get<number>('autoCommitInterval', 300)} 秒`,
+                `时间戳格式: ${config.get<string>('timestampFormat', 'YYYY-MM-DD HH:mm:ss')}`
+            ].join('\n');
+
+            vscode.window.showInformationMessage(
+                `当前工作区配置:\n\n${configInfo}`,
+                { modal: true }
+            );
         })
     ];
 
