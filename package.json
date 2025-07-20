@@ -75,6 +75,11 @@
         "command": "timestampTracker.settings",
         "title": "设置",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "timestampTracker.showConfig",
+        "title": "显示当前配置",
+        "icon": "$(info)"
       }
     ],
     "menus": {

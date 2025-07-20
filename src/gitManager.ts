@@ -19,7 +19,13 @@ export class GitManager {
     private getWorkspaceConfig(): vscode.WorkspaceConfiguration {
         // 获取当前工作区的配置，如果有多个工作区文件夹，使用第一个
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        return vscode.workspace.getConfiguration('timestampTracker', workspaceFolder?.uri);
+        const config = vscode.workspace.getConfiguration('timestampTracker', workspaceFolder?.uri);
+        
+        // 调试日志：显示当前工作区信息
+        console.log(`当前工作区: ${workspaceFolder?.name || '未知'} (${workspaceFolder?.uri.fsPath || '无路径'})`);
+        console.log(`Git仓库配置: ${config.get<string>('gitRepository') || '未设置'}`);
+        
+        return config;
     }
 
     public async initializeRepository(): Promise<void> {
