@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 10:08:00
- * 上次修改时间: 2025-07-20 10:06:57
- * 文件大小: 22669 bytes
+ * 最后修改时间: 2025-07-20 10:08:44
+ * 上次修改时间: 2025-07-20 10:08:01
+ * 文件大小: 23561 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -261,13 +261,38 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
     public async updateTimestampComment(uri: vscode.Uri): Promise<void> {
         try {
             const document = await vscode.workspace.openTextDocument(uri);
-            const hasExistingComment = await this.hasTimestampComment(document);
+            const edit = new vscode.WorkspaceEdit();
             
-            if (hasExistingComment) {
-                await this.updateExistingTimestampComment(uri);
-            } else {
-                await this.insertNewTimestampComment(uri);
+            // 获取文件信息
+            const fileInfo = this.fileTimestamps.get(uri.fsPath);
+            if (!fileInfo) {
+                console.log(`文件信息不存在: ${uri.fsPath}`);
+                return;
             }
+
+            // 生成新的时间戳注释
+            const newComment = this.commentManager.generateTimestampComment(
+                uri.fsPath,
+                fileInfo.lastModified,
+                fileInfo.previousModified,
+                fileInfo.size
+            );
+
+            if (!newComment) {
+                console.log(`无法为文件生成时间戳注释: ${uri.fsPath}`);
+                return;
+            }
+
+            // 1. 删除所有现有的时间戳注释块
+            await this.removeAllTimestampComments(document, edit);
+            
+            // 2. 在文件开头插入新的时间戳注释
+            edit.insert(uri, new vscode.Position(0, 0), newComment + '\n');
+            
+            // 应用编辑
+            await vscode.workspace.applyEdit(edit);
+            console.log(`时间戳注释已更新: ${uri.fsPath}`);
+            
         } catch (error) {
             console.error('更新时间戳注释失败:', error);
         }
