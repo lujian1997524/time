@@ -93,6 +93,61 @@ export function activate(context: vscode.ExtensionContext) {
             } else {
                 vscode.window.showWarningMessage('请先打开一个文件');
             }
+        }),
+
+        vscode.commands.registerCommand('timestampTracker.testClaudeCodeOperation', async () => {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('请先打开一个工作区');
+                return;
+            }
+
+            try {
+                // 标记即将进行外部操作
+                fileWatcher.markAsExternalOperation();
+                
+                // 模拟Claude Code的操作：创建一个新文件
+                const testFilePath = vscode.Uri.joinPath(workspaceFolder.uri, 'claude-test.js');
+                const testContent = `// 这是Claude Code创建的测试文件
+function claudeTest() {
+    console.log("测试Claude Code工具操作的时间戳添加");
+    return "success";
+}
+
+module.exports = { claudeTest };
+`;
+
+                console.log('🔧 模拟Claude Code创建文件操作...');
+                
+                // 使用VSCode的文件API创建文件（模拟工具操作）
+                await vscode.workspace.fs.writeFile(testFilePath, Buffer.from(testContent, 'utf8'));
+                
+                // 等待一会儿让文件监听器处理
+                setTimeout(async () => {
+                    // 再模拟修改操作
+                    const modifiedContent = testContent + `
+// Claude Code添加的修改
+console.log("文件已被Claude Code修改");
+`;
+                    
+                    console.log('🔧 模拟Claude Code修改文件操作...');
+                    await vscode.workspace.fs.writeFile(testFilePath, Buffer.from(modifiedContent, 'utf8'));
+                    
+                    // 显示结果
+                    setTimeout(() => {
+                        vscode.window.showInformationMessage(
+                            '已完成Claude Code操作测试，请检查文件是否自动添加了时间戳'
+                        );
+                        
+                        // 打开创建的文件供查看
+                        vscode.window.showTextDocument(testFilePath);
+                    }, 1000);
+                }, 500);
+                
+            } catch (error) {
+                vscode.window.showErrorMessage(`测试失败: ${error}`);
+                console.error('Claude Code操作测试失败:', error);
+            }
         })
     ];
 

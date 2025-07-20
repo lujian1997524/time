@@ -85,6 +85,11 @@
         "command": "timestampTracker.forceAddTimestamp",
         "title": "强制添加时间戳",
         "icon": "$(clock)"
+      },
+      {
+        "command": "timestampTracker.testClaudeCodeOperation",
+        "title": "测试Claude Code操作",
+        "icon": "$(tools)"
       }
     ],
     "menus": {
@@ -116,6 +121,11 @@
         },
         {
           "command": "timestampTracker.forceAddTimestamp",
+          "when": "view == timestampView",
+          "group": "navigation"
+        },
+        {
+          "command": "timestampTracker.testClaudeCodeOperation",
           "when": "view == timestampView",
           "group": "navigation"
         }
