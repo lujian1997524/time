@@ -2,7 +2,7 @@
   "name": "timestamp-tracker",
   "displayName": "Timestamp Tracker",
   "description": "Track file modifications with timestamps and auto-push to GitHub",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "engines": {
     "vscode": "^1.74.0"
   },
