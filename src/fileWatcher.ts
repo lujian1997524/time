@@ -115,8 +115,8 @@ export class FileWatcher implements vscode.Disposable {
         }
 
         // 延迟处理文件变化，避免频繁触发
-        const timeout = setTimeout(() => {
-            this.processFileChange(uri, changeType, fileModTime);
+        const timeout = setTimeout(async () => {
+            await this.processFileChange(uri, changeType, fileModTime);
             this.timestampUpdateTimeout.delete(uri.fsPath);
         }, 500); // 500ms 延迟
 
@@ -199,7 +199,7 @@ export class FileWatcher implements vscode.Disposable {
         console.log('标记即将进行外部工具操作');
     }
 
-    private onDocumentSaved(document: vscode.TextDocument): void {
+    private async onDocumentSaved(document: vscode.TextDocument): Promise<void> {
         // 检查文件是否应该被跟踪
         if (!this.gitIgnoreManager.shouldTrackFile(document.uri.fsPath)) {
             console.log(`跳过被忽略的文件: ${document.uri.fsPath}`);
@@ -231,7 +231,7 @@ export class FileWatcher implements vscode.Disposable {
 
         try {
             // 更新文件时间戳并添加/更新注释（用户主动保存才更新注释）
-            this.timestampProvider.addTimestamp(document.uri);
+            await this.timestampProvider.addTimestamp(document.uri);
             
             // 记录保存事件
             this.timestampProvider.updateFileChange(document.uri.fsPath, '文档保存');
