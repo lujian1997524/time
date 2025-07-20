@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:27:09
- * 上次修改时间: 2025-07-20 09:27:09
- * 文件大小: 15809 bytes
+ * 最后修改时间: 2025-07-20 09:27:36
+ * 上次修改时间: 2025-07-20 09:27:36
+ * 文件大小: 16669 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -210,6 +210,21 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 await this.updateExistingTimestampComment(uri);
             } else {
                 await this.insertNewTimestampComment(uri);
+            }
+        } catch (error) {
+            console.error('更新时间戳注释失败:', error);
+        }
+    }
+
+    public async updateTimestampCommentWithTimes(uri: vscode.Uri, lastModified: Date, previousModified?: Date, fileSize?: number): Promise<void> {
+        try {
+            const document = await vscode.workspace.openTextDocument(uri);
+            const hasExistingComment = await this.hasTimestampComment(document);
+            
+            if (hasExistingComment) {
+                await this.updateExistingTimestampCommentWithTimes(uri, lastModified, previousModified, fileSize);
+            } else {
+                await this.insertNewTimestampCommentWithTimes(uri, lastModified, previousModified, fileSize);
             }
         } catch (error) {
             console.error('更新时间戳注释失败:', error);
