@@ -10,6 +10,7 @@ export class FileWatcher implements vscode.Disposable {
     private gitIgnoreManager: GitIgnoreManager;
     private isUpdatingTimestamp: Set<string> = new Set(); // 跟踪正在更新时间戳的文件
     private timestampUpdateTimeout: Map<string, NodeJS.Timeout> = new Map(); // 防抖动
+    private lastExternalCheckTime: number = 0; // 记录上次外部操作检查时间
 
     constructor(
         private timestampProvider: TimestampProvider,
@@ -138,19 +139,36 @@ export class FileWatcher implements vscode.Disposable {
 
     private isExternalFileChange(changeType: string): boolean {
         // 判断是否是外部工具的文件操作
-        // 当前时间戳，如果在很短时间内有文件变化，很可能是工具操作
         const now = Date.now();
+        
+        // 检查是否是文件创建或修改（Claude Code常见操作）
+        const isCreateOrModify = changeType === '文件创建' || changeType === '文件修改';
+        
+        if (!isCreateOrModify) {
+            return false;
+        }
+        
+        // 检查时间模式：如果在短时间内有多个文件操作，很可能是工具批量操作
         const lastCheck = this.lastExternalCheckTime || 0;
         this.lastExternalCheckTime = now;
         
-        // 如果距离上次检查很短时间内有多个文件变化，可能是批量操作（如Claude Code）
-        if (now - lastCheck < 100) {
-            console.log(`检测到可能的批量操作: ${changeType}`);
+        const timeDiff = now - lastCheck;
+        
+        // 如果距离上次检查很短时间（小于200ms），可能是批量操作
+        if (timeDiff < 200 && timeDiff > 0) {
+            console.log(`检测到快速连续操作，判断为外部工具: ${changeType}`);
             return true;
         }
         
-        // 检查是否是文件创建或修改（Claude Code常见操作）
-        return changeType === '文件创建' || changeType === '文件修改';
+        // 对于单独的文件创建或修改，也认为可能是外部工具操作
+        // 因为用户手动操作通常会先触发文档事件，然后是文件系统事件
+        return true;
+    }
+
+    public markAsExternalOperation(): void {
+        // 提供一个公共方法来标记即将进行的外部操作
+        this.lastExternalCheckTime = Date.now();
+        console.log('标记即将进行外部工具操作');
     }
 
     private onDocumentSaved(document: vscode.TextDocument): void {
