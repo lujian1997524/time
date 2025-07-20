@@ -1,3 +1,8 @@
+/**
+ * 最后修改时间: 2025-07-20 09:27:09
+ * 上次修改时间: 2025-07-20 09:27:09
+ * 文件大小: 15809 bytes
+ */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -172,13 +177,18 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
         }
 
         try {
+            // 获取当前文件信息，包括之前的时间戳
+            const existingFileInfo = this.fileTimestamps.get(uri.fsPath);
+            const previousModifiedTime = existingFileInfo?.lastModified;
+            
             const stats = fs.statSync(uri.fsPath);
             this.addFileTimestamp(uri.fsPath, stats);
             
             // 只为支持的文件类型更新时间戳注释
             if (this.commentManager.isCommentSupported(uri.fsPath)) {
                 console.log(`文件支持注释，正在更新时间戳注释: ${uri.fsPath}`);
-                this.updateTimestampComment(uri);
+                // 传递正确的previousModified时间给注释更新
+                this.updateTimestampCommentWithTimes(uri, stats.mtime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
