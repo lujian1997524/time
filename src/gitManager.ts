@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:44:15
- * 上次修改时间: 2025-07-20 09:02:20
- * 文件大小: 13771 bytes
+ * 最后修改时间: 2025-07-20 09:49:55
+ * 上次修改时间: 2025-07-20 09:44:16
+ * 文件大小: 21536 bytes
  */
 import * as vscode from 'vscode';
 import { simpleGit } from 'simple-git';
@@ -103,104 +103,282 @@ export class GitManager {
     private async generateDetailedCommitMessage(status: any): Promise<string> {
         const timestamp = moment().format('YYYY-MM-DD HH:mm:ss');
         
-        // 分类文件变化
+        // 分析代码变化的具体内容
+        const changeAnalysis = await this.analyzeCodeChanges(status.files);
+        
+        if (changeAnalysis.features.length > 0 || changeAnalysis.fixes.length > 0 || changeAnalysis.improvements.length > 0) {
+            // 生成基于功能的提交信息
+            return this.generateFeatureBasedCommitMessage(changeAnalysis, timestamp);
+        } else {
+            // 如果无法分析出具体功能，使用文件变化分析
+            return this.generateFileBasedCommitMessage(status, timestamp);
+        }
+    }
+
+    private async analyzeCodeChanges(files: any[]): Promise<any> {
+        const analysis = {
+            features: [] as string[],
+            fixes: [] as string[],
+            improvements: [] as string[],
+            configs: [] as string[],
+            docs: [] as string[]
+        };
+
+        for (const file of files) {
+            try {
+                // 读取文件内容来分析变化
+                const filePath = path.join(this.workspaceRoot, file.path);
+                const content = require('fs').readFileSync(filePath, 'utf8');
+                
+                // 分析文件名和内容
+                const fileName = path.basename(file.path).toLowerCase();
+                const fileAnalysis = this.analyzeFileContent(fileName, content, file.path);
+                
+                analysis.features.push(...fileAnalysis.features);
+                analysis.fixes.push(...fileAnalysis.fixes);
+                analysis.improvements.push(...fileAnalysis.improvements);
+                analysis.configs.push(...fileAnalysis.configs);
+                analysis.docs.push(...fileAnalysis.docs);
+                
+            } catch (error) {
+                console.log(`无法分析文件 ${file.path}: ${error}`);
+            }
+        }
+        
+        // 去重
+        analysis.features = [...new Set(analysis.features)];
+        analysis.fixes = [...new Set(analysis.fixes)];
+        analysis.improvements = [...new Set(analysis.improvements)];
+        analysis.configs = [...new Set(analysis.configs)];
+        analysis.docs = [...new Set(analysis.docs)];
+        
+        return analysis;
+    }
+
+    private analyzeFileContent(fileName: string, content: string, filePath: string): any {
+        const analysis = {
+            features: [] as string[],
+            fixes: [] as string[],
+            improvements: [] as string[],
+            configs: [] as string[],
+            docs: [] as string[]
+        };
+
+        // 转换为小写便于匹配
+        const lowerContent = content.toLowerCase();
+        const lowerFileName = fileName.toLowerCase();
+
+        // 分析新功能
+        if (this.detectNewFeature(lowerContent, lowerFileName, filePath)) {
+            const feature = this.extractFeatureDescription(content, fileName);
+            if (feature) analysis.features.push(feature);
+        }
+
+        // 分析错误修复
+        if (this.detectBugFix(lowerContent, lowerFileName)) {
+            const fix = this.extractFixDescription(content, fileName);
+            if (fix) analysis.fixes.push(fix);
+        }
+
+        // 分析改进
+        if (this.detectImprovement(lowerContent, lowerFileName)) {
+            const improvement = this.extractImprovementDescription(content, fileName);
+            if (improvement) analysis.improvements.push(improvement);
+        }
+
+        // 分析配置变化
+        if (this.detectConfigChange(lowerFileName, lowerContent)) {
+            const config = this.extractConfigDescription(fileName, content);
+            if (config) analysis.configs.push(config);
+        }
+
+        // 分析文档更新
+        if (this.detectDocumentationChange(lowerFileName, lowerContent)) {
+            const doc = this.extractDocDescription(fileName, content);
+            if (doc) analysis.docs.push(doc);
+        }
+
+        return analysis;
+    }
+
+    private detectNewFeature(content: string, fileName: string, filePath: string): boolean {
+        // 检测新功能的关键词和模式
+        const featureKeywords = [
+            'export class', 'export function', 'export interface',
+            'new ', '新增', '添加', 'add', 'create', 'implement',
+            'feature', '功能', 'method', 'component'
+        ];
+
+        const hasNewCode = featureKeywords.some(keyword => content.includes(keyword));
+        const isNewFile = filePath.includes('new') || content.includes('新建') || content.includes('创建');
+        
+        return hasNewCode || isNewFile;
+    }
+
+    private detectBugFix(content: string, fileName: string): boolean {
+        // 检测错误修复的关键词
+        const fixKeywords = [
+            'fix', 'bug', 'error', 'issue', 'problem',
+            '修复', '错误', '问题', '解决', 'solve',
+            'correct', '纠正', 'patch', '补丁'
+        ];
+
+        return fixKeywords.some(keyword => content.includes(keyword));
+    }
+
+    private detectImprovement(content: string, fileName: string): boolean {
+        // 检测改进的关键词
+        const improvementKeywords = [
+            'improve', 'optimize', 'enhance', 'refactor',
+            '改进', '优化', '增强', '重构', '提升',
+            'performance', '性能', 'better', '更好'
+        ];
+
+        return improvementKeywords.some(keyword => content.includes(keyword));
+    }
+
+    private detectConfigChange(fileName: string, content: string): boolean {
+        // 检测配置文件变化
+        const configFiles = ['package.json', 'tsconfig.json', '.json', '.yaml', '.yml', '.env'];
+        return configFiles.some(ext => fileName.includes(ext));
+    }
+
+    private detectDocumentationChange(fileName: string, content: string): boolean {
+        // 检测文档变化
+        const docFiles = ['.md', 'readme', 'doc', 'manual'];
+        return docFiles.some(ext => fileName.includes(ext));
+    }
+
+    private extractFeatureDescription(content: string, fileName: string): string {
+        // 从注释或函数名中提取功能描述
+        const lines = content.split('\n');
+        
+        // 查找包含功能描述的注释
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.includes('//') && (line.includes('新增') || line.includes('添加') || line.includes('功能'))) {
+                return this.cleanDescription(line);
+            }
+            if (line.includes('/**') && i + 1 < lines.length) {
+                const nextLine = lines[i + 1].trim();
+                if (nextLine.includes('新增') || nextLine.includes('添加') || nextLine.includes('功能')) {
+                    return this.cleanDescription(nextLine);
+                }
+            }
+        }
+
+        // 从文件名推断功能
+        if (fileName.includes('test')) return `添加${fileName.replace(/\..*/, '')}测试功能`;
+        if (fileName.includes('manager')) return `实现${fileName.replace(/\..*/, '')}管理功能`;
+        if (fileName.includes('provider')) return `新增${fileName.replace(/\..*/, '')}数据提供功能`;
+        
+        return `新增${fileName.replace(/\..*/, '')}功能模块`;
+    }
+
+    private extractFixDescription(content: string, fileName: string): string {
+        // 提取修复描述
+        const lines = content.split('\n');
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if ((trimmed.includes('//') || trimmed.includes('*')) && 
+                (trimmed.includes('修复') || trimmed.includes('fix') || trimmed.includes('解决'))) {
+                return this.cleanDescription(trimmed);
+            }
+        }
+
+        return `修复${fileName.replace(/\..*/, '')}相关问题`;
+    }
+
+    private extractImprovementDescription(content: string, fileName: string): string {
+        // 提取改进描述
+        const lines = content.split('\n');
+        
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if ((trimmed.includes('//') || trimmed.includes('*')) && 
+                (trimmed.includes('改进') || trimmed.includes('优化') || trimmed.includes('improve'))) {
+                return this.cleanDescription(trimmed);
+            }
+        }
+
+        return `优化${fileName.replace(/\..*/, '')}性能和功能`;
+    }
+
+    private extractConfigDescription(fileName: string, content: string): string {
+        if (fileName.includes('package.json')) {
+            if (content.includes('"version"')) return '更新项目版本配置';
+            if (content.includes('"dependencies"')) return '更新项目依赖配置';
+            return '更新项目配置';
+        }
+        if (fileName.includes('tsconfig.json')) return '更新TypeScript编译配置';
+        return `更新${fileName}配置文件`;
+    }
+
+    private extractDocDescription(fileName: string, content: string): string {
+        if (fileName.includes('readme')) return '更新项目文档和说明';
+        if (fileName.includes('doc')) return '更新技术文档';
+        return `更新${fileName}文档`;
+    }
+
+    private cleanDescription(description: string): string {
+        // 清理描述文本，移除注释符号和多余空格
+        return description
+            .replace(/\/\*\*?|\*\/|\*|\/\/|#/g, '')
+            .replace(/^\s+|\s+$/g, '')
+            .replace(/\s+/g, ' ');
+    }
+
+    private generateFeatureBasedCommitMessage(analysis: any, timestamp: string): string {
+        const parts = [];
+        
+        // 构建主要描述
+        if (analysis.features.length > 0) {
+            parts.push(`✨ ${analysis.features.join(', ')}`);
+        }
+        
+        if (analysis.fixes.length > 0) {
+            parts.push(`🐛 ${analysis.fixes.join(', ')}`);
+        }
+        
+        if (analysis.improvements.length > 0) {
+            parts.push(`⚡ ${analysis.improvements.join(', ')}`);
+        }
+        
+        if (analysis.configs.length > 0) {
+            parts.push(`🔧 ${analysis.configs.join(', ')}`);
+        }
+        
+        if (analysis.docs.length > 0) {
+            parts.push(`📚 ${analysis.docs.join(', ')}`);
+        }
+
+        const mainMessage = parts.length > 0 ? parts[0].replace(/^[✨🐛⚡🔧📚]\s/, '') : `代码更新`;
+        const details = parts.length > 1 ? `\n\n${parts.slice(1).join('\n')}` : '';
+        
+        return `${mainMessage}${details}\n\n🕒 ${timestamp}`;
+    }
+
+    private generateFileBasedCommitMessage(status: any, timestamp: string): string {
+        // 备用方案：基于文件变化的提交信息
         const changes = {
             created: status.files.filter((f: any) => f.index === 'A' || f.working_dir === 'A'),
             modified: status.files.filter((f: any) => f.index === 'M' || f.working_dir === 'M'),
-            deleted: status.files.filter((f: any) => f.index === 'D' || f.working_dir === 'D'),
-            renamed: status.files.filter((f: any) => f.index === 'R' || f.working_dir === 'R')
+            deleted: status.files.filter((f: any) => f.index === 'D' || f.working_dir === 'D')
         };
 
         let summary = '';
-        const details = [];
-
-        // 生成概述
-        if (changes.created.length > 0) {
-            summary += `新增${changes.created.length}个文件`;
-            details.push(`📝 新增文件: ${changes.created.map((f: any) => path.basename(f.path)).join(', ')}`);
-        }
-        
+        if (changes.created.length > 0) summary += `新增${changes.created.length}个文件`;
         if (changes.modified.length > 0) {
             if (summary) summary += ', ';
             summary += `修改${changes.modified.length}个文件`;
-            details.push(`✏️ 修改文件: ${changes.modified.map((f: any) => path.basename(f.path)).join(', ')}`);
         }
-        
         if (changes.deleted.length > 0) {
             if (summary) summary += ', ';
             summary += `删除${changes.deleted.length}个文件`;
-            details.push(`🗑️ 删除文件: ${changes.deleted.map((f: any) => path.basename(f.path)).join(', ')}`);
-        }
-        
-        if (changes.renamed.length > 0) {
-            if (summary) summary += ', ';
-            summary += `重命名${changes.renamed.length}个文件`;
-            details.push(`📝 重命名文件: ${changes.renamed.map((f: any) => path.basename(f.path)).join(', ')}`);
         }
 
-        // 检测文件类型和特殊操作
-        const typeAnalysis = this.analyzeFileTypes(status.files);
-        if (typeAnalysis.length > 0) {
-            details.push(`🔧 涉及: ${typeAnalysis.join(', ')}`);
-        }
-
-        // 构建最终提交信息
-        const commitMessage = `${summary} - ${timestamp}
-
-${details.join('\n')}
-
-📊 变更统计: ${status.files.length}个文件
-🕒 自动提交时间: ${timestamp}`;
-
-        console.log('生成的提交信息:', commitMessage);
-        return commitMessage;
-    }
-
-    private analyzeFileTypes(files: any[]): string[] {
-        const analysis = [];
-        const extensions = new Set(files.map((f: any) => path.extname(f.path).toLowerCase()));
-        
-        // 检测文件类型
-        if (extensions.has('.ts') || extensions.has('.js')) {
-            analysis.push('TypeScript/JavaScript代码');
-        }
-        if (extensions.has('.json')) {
-            analysis.push('配置文件');
-        }
-        if (extensions.has('.md')) {
-            analysis.push('文档更新');
-        }
-        if (extensions.has('.css') || extensions.has('.scss')) {
-            analysis.push('样式文件');
-        }
-        if (extensions.has('.html')) {
-            analysis.push('页面文件');
-        }
-        
-        // 检测特殊文件
-        const specialFiles = files.filter((f: any) => {
-            const fileName = path.basename(f.path).toLowerCase();
-            return fileName.includes('package.json') || 
-                   fileName.includes('tsconfig.json') || 
-                   fileName.includes('readme') ||
-                   fileName.includes('license');
-        });
-        
-        if (specialFiles.length > 0) {
-            analysis.push('项目配置');
-        }
-        
-        // 检测时间戳更新
-        const hasTimestampFiles = files.some((f: any) => 
-            f.path.includes('timestamp') || 
-            f.path.includes('时间戳')
-        );
-        
-        if (hasTimestampFiles) {
-            analysis.push('时间戳跟踪');
-        }
-        
-        return analysis;
+        return `${summary}\n\n🕒 ${timestamp}`;
     }
 
     public async pushToRemote(): Promise<void> {

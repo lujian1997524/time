@@ -15,6 +15,7 @@
     ".vscode-test",
     "test-user-manager.ts",
     "timestamp-fix-test.ts",
-    "timestamp-validation-test.ts"
+    "timestamp-validation-test.ts",
+    "git-commit-test.ts"
   ]
 }
