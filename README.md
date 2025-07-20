@@ -36,6 +36,7 @@
 - 自动推送到远程 GitHub 仓库
 - 可配置的提交间隔
 - **遵循 .gitignore 规则，不提交被忽略的文件**
+- **手动强制推送覆盖功能**：一键覆盖远程仓库内容
 
 ### ⚙️ 灵活配置
 - 自定义时间戳格式
@@ -123,6 +124,7 @@ npm run watch
 ### 工具栏按钮
 - 🔄 **刷新**: 重新扫描工作区文件
 - ➕ **添加时间戳**: 手动为当前文件添加时间戳
+- 🔄 **强制推送覆盖**: 强制推送本地内容覆盖远程仓库（⚠️ 危险操作）
 - ⚙️ **设置**: 打开插件配置
 
 ## 支持的文件类型
@@ -198,6 +200,7 @@ npm run watch
 - `timestampTracker.refresh`: 刷新文件列表
 - `timestampTracker.addTimestamp`: 添加时间戳
 - `timestampTracker.pushToGit`: 推送到 Git
+- `timestampTracker.forcePushToGit`: 强制推送覆盖远程仓库
 - `timestampTracker.settings`: 打开设置
 
 ## 开发
