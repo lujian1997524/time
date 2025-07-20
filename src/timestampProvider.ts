@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:33:04
- * 上次修改时间: 2025-07-20 09:28:03
- * 文件大小: 19900 bytes
+ * 最后修改时间: 2025-07-20 09:34:39
+ * 上次修改时间: 2025-07-20 09:33:05
+ * 文件大小: 22441 bytes
  */
 import * as vscode from 'vscode';
 import * as fs from 'fs';
@@ -164,6 +164,56 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             console.log(`更新文件时间戳信息: ${path.basename(uri.fsPath)}`);
         } catch (error) {
             console.error(`更新文件时间戳失败: ${error}`);
+        }
+    }
+
+    public addTimestampWithActualTime(uri: vscode.Uri, actualFileModTime: Date): void {
+        console.log(`addTimestampWithActualTime 被调用，文件: ${uri.fsPath}`);
+        console.log(`实际文件修改时间: ${actualFileModTime.toISOString()}`);
+        
+        // 检查文件是否应该被跟踪
+        if (!this.gitIgnoreManager.shouldAddTimestamp(uri.fsPath)) {
+            console.log(`跳过被忽略的文件: ${uri.fsPath}`);
+            return;
+        }
+
+        try {
+            // 获取当前文件信息，包括之前的时间戳
+            const existingFileInfo = this.fileTimestamps.get(uri.fsPath);
+            const previousModifiedTime = existingFileInfo?.lastModified;
+            
+            // 获取当前文件状态（用于文件大小）
+            const stats = fs.statSync(uri.fsPath);
+            
+            // 手动创建文件时间戳信息，使用传入的实际修改时间
+            const fileTimestamp: FileTimestamp = {
+                filePath: uri.fsPath,
+                fileName: path.basename(uri.fsPath),
+                lastModified: actualFileModTime, // 使用传入的实际时间
+                previousModified: previousModifiedTime, // 保存之前的时间
+                changes: existingFileInfo?.changes || [],
+                size: stats.size
+            };
+            
+            this.fileTimestamps.set(uri.fsPath, fileTimestamp);
+            
+            // 只为支持的文件类型更新时间戳注释
+            if (this.commentManager.isCommentSupported(uri.fsPath)) {
+                console.log(`文件支持注释，正在更新时间戳注释: ${uri.fsPath}`);
+                console.log(`当前时间: ${actualFileModTime.toISOString()}`);
+                console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
+                
+                // 传递正确的时间：实际文件修改时间和之前保存的时间
+                this.updateTimestampCommentWithTimes(uri, actualFileModTime, previousModifiedTime, stats.size);
+            } else {
+                console.log(`文件类型不支持注释: ${uri.fsPath}`);
+            }
+            
+            this._onDidChangeTreeData.fire();
+            vscode.window.showInformationMessage(`已更新文件时间戳: ${path.basename(uri.fsPath)}`);
+        } catch (error) {
+            console.error(`添加时间戳失败: ${error}`);
+            vscode.window.showErrorMessage(`添加时间戳失败: ${error}`);
         }
     }
 
