@@ -204,7 +204,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
                 
                 // 传递正确的时间：实际文件修改时间和之前保存的时间
-                this.updateTimestampCommentWithTimes(uri, actualFileModTime, previousModifiedTime, stats.size);
+                await this.updateTimestampCommentWithTimes(uri, actualFileModTime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
@@ -245,7 +245,7 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
                 console.log(`上次时间: ${previousModifiedTime ? previousModifiedTime.toISOString() : '无'}`);
                 
                 // 传递正确的时间：当前时间和之前保存的时间
-                this.updateTimestampCommentWithTimes(uri, currentModifiedTime, previousModifiedTime, stats.size);
+                await this.updateTimestampCommentWithTimes(uri, currentModifiedTime, previousModifiedTime, stats.size);
             } else {
                 console.log(`文件类型不支持注释: ${uri.fsPath}`);
             }
@@ -336,6 +336,9 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
             
             // 应用编辑
             await vscode.workspace.applyEdit(edit);
+            
+            // 等待一点时间确保编辑完成
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             // 保存文件
             const doc = await vscode.workspace.openTextDocument(uri);
