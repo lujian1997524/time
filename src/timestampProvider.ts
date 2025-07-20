@@ -348,31 +348,168 @@ export class TimestampProvider implements vscode.TreeDataProvider<FileTimestamp>
 
     private removeTimestampCommentsFromContent(content: string, filePath: string): string {
         const ext = path.extname(filePath).toLowerCase();
-        const lines = content.split('\n');
-        const timestampRegex = this.commentManager.getTimestampRegex(filePath);
         
-        if (!timestampRegex) {
-            return content;
+        // 使用更简单的字符串匹配方法删除时间戳注释
+        // 这种方法更可靠，不依赖复杂的正则表达式
+        
+        let cleanContent = content;
+        
+        // 定义时间戳关键词
+        const timestampKeywords = ['最后修改时间', '上次修改时间', '文件大小', 'Last modified', 'Modified', 'File size'];
+        
+        if (ext === '.md' || ext === '.html' || ext === '.xml') {
+            // HTML/XML/Markdown 注释格式: <!-- ... -->
+            cleanContent = this.removeHtmlComments(cleanContent, timestampKeywords);
+        } else if (ext === '.py') {
+            // Python 注释格式: """ ... """
+            cleanContent = this.removePythonComments(cleanContent, timestampKeywords);
+        } else if (ext === '.js' || ext === '.ts' || ext === '.jsx' || ext === '.tsx' || 
+                   ext === '.java' || ext === '.c' || ext === '.cpp' || ext === '.cs' ||
+                   ext === '.swift' || ext === '.kt' || ext === '.dart' || ext === '.scala') {
+            // JavaScript/TypeScript/Java/C++ 等注释格式: /** ... */ 或 /* ... */
+            cleanContent = this.removeJavaScriptComments(cleanContent, timestampKeywords);
+        } else if (ext === '.sh' || ext === '.bash' || ext === '.zsh' || ext === '.yml' || 
+                   ext === '.yaml' || ext === '.toml' || ext === '.py' || ext === '.rb' || 
+                   ext === '.pl' || ext === '.r') {
+            // Shell/YAML/Python/Ruby 等注释格式: # ...
+            cleanContent = this.removeHashComments(cleanContent, timestampKeywords);
         }
+        
+        console.log(`清理前行数: ${content.split('\n').length}, 清理后行数: ${cleanContent.split('\n').length}`);
+        
+        return cleanContent;
+    }
 
+    private removeHtmlComments(content: string, keywords: string[]): string {
+        const lines = content.split('\n');
         const resultLines: string[] = [];
         let i = 0;
         
         while (i < lines.length) {
             const line = lines[i];
             
-            // 检查当前行是否是时间戳注释的一部分
-            if (timestampRegex.test(line)) {
-                // 找到时间戳注释块的开始和结束
-                const blockStart = this.findContentCommentBlockStart(lines, i);
-                const blockEnd = this.findContentCommentBlockEnd(lines, i, ext);
-                
-                console.log(`删除时间戳注释块: 行 ${blockStart}-${blockEnd}`);
-                
-                // 跳过整个注释块
-                i = blockEnd + 1;
+            // 检查是否是HTML注释开始且包含时间戳关键词
+            if (line.includes('<!--') && keywords.some(keyword => line.includes(keyword))) {
+                // 找到注释块的结束
+                let endFound = false;
+                while (i < lines.length && !endFound) {
+                    if (lines[i].includes('-->')) {
+                        endFound = true;
+                    }
+                    i++;
+                }
+                // 跳过空行
+                while (i < lines.length && lines[i].trim() === '') {
+                    i++;
+                }
             } else {
-                // 保留非时间戳注释行
+                resultLines.push(line);
+                i++;
+            }
+        }
+        
+        return resultLines.join('\n');
+    }
+
+    private removePythonComments(content: string, keywords: string[]): string {
+        const lines = content.split('\n');
+        const resultLines: string[] = [];
+        let i = 0;
+        
+        while (i < lines.length) {
+            const line = lines[i];
+            
+            // 检查是否是Python多行注释开始且包含时间戳关键词
+            if (line.includes('"""') && keywords.some(keyword => content.substring(content.indexOf(line)).includes(keyword))) {
+                // 找到注释块的结束
+                let endFound = false;
+                let quoteCount = (line.match(/"""/g) || []).length;
+                
+                if (quoteCount >= 2) {
+                    // 单行包含开始和结束
+                    endFound = true;
+                    i++;
+                } else {
+                    // 多行注释
+                    i++;
+                    while (i < lines.length && !endFound) {
+                        if (lines[i].includes('"""')) {
+                            endFound = true;
+                        }
+                        i++;
+                    }
+                }
+                
+                // 跳过空行
+                while (i < lines.length && lines[i].trim() === '') {
+                    i++;
+                }
+            } else {
+                resultLines.push(line);
+                i++;
+            }
+        }
+        
+        return resultLines.join('\n');
+    }
+
+    private removeJavaScriptComments(content: string, keywords: string[]): string {
+        const lines = content.split('\n');
+        const resultLines: string[] = [];
+        let i = 0;
+        
+        while (i < lines.length) {
+            const line = lines[i];
+            
+            // 检查是否是JavaScript注释开始且包含时间戳关键词
+            if ((line.includes('/**') || line.includes('/*')) && keywords.some(keyword => content.substring(content.indexOf(line)).includes(keyword))) {
+                // 找到注释块的结束
+                let endFound = false;
+                
+                if (line.includes('*/')) {
+                    // 单行注释
+                    endFound = true;
+                    i++;
+                } else {
+                    // 多行注释
+                    i++;
+                    while (i < lines.length && !endFound) {
+                        if (lines[i].includes('*/')) {
+                            endFound = true;
+                        }
+                        i++;
+                    }
+                }
+                
+                // 跳过空行
+                while (i < lines.length && lines[i].trim() === '') {
+                    i++;
+                }
+            } else {
+                resultLines.push(line);
+                i++;
+            }
+        }
+        
+        return resultLines.join('\n');
+    }
+
+    private removeHashComments(content: string, keywords: string[]): string {
+        const lines = content.split('\n');
+        const resultLines: string[] = [];
+        let i = 0;
+        
+        while (i < lines.length) {
+            const line = lines[i];
+            
+            // 检查是否是#注释且包含时间戳关键词
+            if (line.trim().startsWith('#') && keywords.some(keyword => line.includes(keyword))) {
+                // 跳过连续的#注释行（时间戳注释块）
+                while (i < lines.length && 
+                       (lines[i].trim().startsWith('#') || lines[i].trim() === '')) {
+                    i++;
+                }
+            } else {
                 resultLines.push(line);
                 i++;
             }
