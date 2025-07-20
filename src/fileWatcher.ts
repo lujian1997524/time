@@ -1,7 +1,7 @@
 /**
- * 最后修改时间: 2025-07-20 09:33:48
- * 上次修改时间: 2025-07-20 09:17:57
- * 文件大小: 10649 bytes
+ * 最后修改时间: 2025-07-20 09:34:22
+ * 上次修改时间: 2025-07-20 09:33:49
+ * 文件大小: 11017 bytes
  */
 import * as vscode from 'vscode';
 import { TimestampProvider } from './timestampProvider';
@@ -120,7 +120,7 @@ export class FileWatcher implements vscode.Disposable {
         this.timestampUpdateTimeout.set(uri.fsPath, timeout);
     }
 
-    private processFileChange(uri: vscode.Uri, changeType: string): void {
+    private processFileChange(uri: vscode.Uri, changeType: string, actualFileModTime?: Date): void {
         // 标记开始更新时间戳
         this.isUpdatingTimestamp.add(uri.fsPath);
 
@@ -130,8 +130,12 @@ export class FileWatcher implements vscode.Disposable {
             
             if (isExternalChange) {
                 console.log(`检测到外部工具操作: ${changeType} - ${uri.fsPath}`);
-                // 对于外部工具操作，直接添加时间戳注释
-                this.timestampProvider.addTimestamp(uri);
+                // 对于外部工具操作，直接添加时间戳注释，使用保存的文件修改时间
+                if (actualFileModTime) {
+                    this.timestampProvider.addTimestampWithActualTime(uri, actualFileModTime);
+                } else {
+                    this.timestampProvider.addTimestamp(uri);
+                }
             } else {
                 // 对于其他变化，只更新时间戳信息
                 this.timestampProvider.updateFileTimestamp(uri);
